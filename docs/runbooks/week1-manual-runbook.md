@@ -19,16 +19,16 @@ az vm create
 
 
 uname -a        
-# confirms I'm on on ARM64 — incorrect image type was causing issues with VM creation. 
+* confirms I'm on on ARM64 — incorrect image type was causing issues with VM creation. 
 
 df -h           
-# B1s/B2ps has ~30GB disk — about 6% has been used and rest is available
+* B1s/B2ps has ~30GB disk — about 6% has been used and rest is available
 
 free -m         
-# shows about 1GB total RAM is available and how much is already in use and availble for use.
+* shows about 1GB total RAM is available and how much is already in use and availble for use.
 
 top             
-# CPU is almost 100% idle → VM is idle, no heavy workload, Memory is mostly in buff/cache → Linux caching disk, very normal, Only systemd and a few kernel threads are using RAM and CPU, No zombie or stuck processes → VM is healthy
+* CPU is almost 100% idle → VM is idle, no heavy workload, Memory is mostly in buff/cache → Linux caching disk, very normal, Only systemd and a few kernel threads are using RAM and CPU, No zombie or stuck processes → VM is healthy
 
 
 cd ~
@@ -36,20 +36,20 @@ git clone https://github.com/dockersamples/example-voting-app.git
 cd example-voting-app
 ls
 
-# clones the voting app from Github and checked its content. 
+* clones the voting app from Github and checked its content. 
 
 sudo apt update && sudo apt install -y git python3 python3-pip nodejs npm
 
-# Installed system updates and installed app dependencies. 
+* Installed system updates and installed app dependencies. 
 
 python3 --version
-# Python 3.10.12
+* Python 3.10.12
 
 node --version
-# v12.22.9
+* v12.22.9
 
 npm --version
-# 8.5.1
+* 8.5.1
 
 sudo pip3 install -r requirements.txt
 
@@ -69,7 +69,7 @@ Press CTRL+C to quit
 ### What I observed
 
 http://<VM:PublicIP>
-# Not reachable
+* Not reachable
 
 ### Fix
 
@@ -78,7 +78,7 @@ az vm open-port \
   --name vm-arm-b2pts-01 \
   --port 80
 
-# NSG was blocking access to VM. cmd above opened port 80 and made it reachable from the internet. 
+* NSG was blocking access to VM. cmd above opened port 80 and made it reachable from the internet. 
 
 
 ### What broke / decisions made
