@@ -3,18 +3,18 @@
 ## Day 1 — Provision Linux VM on Azure by Hand
 ### Commands run
 
-az group create   
- --name rg-devops-wus1   
- --location westus
+az group create \
+  --name rg-devops-wus1 \
+  --location westus
 
-az vm create   
- --resource-group rg-devops-wus1   
- --name vm-arm-b2pts-01   
- --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-arm64:latest   
- --size Standard_B2pts_v2   
- --admin-username azureuser   
- --generate-ssh-keys   
- --security-type Standard
+az vm create \
+  --resource-group rg-devops-wus1 \
+  --name vm-arm-b2pts-01 \
+  --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-arm64:latest \
+  --size Standard_B2pts_v2 \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --security-type Standard
 ...
 
 
