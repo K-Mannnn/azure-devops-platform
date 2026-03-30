@@ -51,6 +51,8 @@ node --version
 npm --version
 * 8.5.1
 
+cd vote
+
 sudo pip3 install -r requirements.txt
 
 
@@ -292,3 +294,130 @@ recognise exactly what it replaces.**
 
 ### Deferred to Wednesday Bash Challenge
 - Health check script (`health-check.sh`) — checks process, port, HTTP response
+
+
+## Day 3 - The Snowflake Problem — Feel the Pain
+
+* Since Day 3 tasks were completed as part of Day 1 and 2 i.e. re creating VM from scratch at every session, there's no separate run book for Day 3. week01/notes/week01-notes.md was updated accordingly with lessons learnt and decisions/ 001-why-wen-need-iac.md was created. 
+
+
+## Day 4 — Networking Reality Check — Why Can Nobody Reach the App?
+### Commands run
+
+* To block the port 80 previously opened to allow access to the app from the internet. 
+
+az network nsg rule create \
+  --resource-group rg-devops-wus1 \
+  --nsg-name vm-arm-b2pts-01NSG \
+  --name DenyHTTP \
+  --priority 100 \
+  --direction Inbound \
+  --access Deny \
+  --protocol Tcp \
+  --destination-port-ranges 80 \
+  --source-address-prefixes '*' \
+  --source-port-ranges '*'
+
+* Resulting in --  App is unreachable from the internet. 
+
+curl -I http://<YOUR_IP>:80   
+
+
+## To Trouble shoot the issue layer by layer: 
+
+curl localthost:80
+
+* Confirms that app is running locally on the VM 
+
+ss -tlnp
+
+* confirms the VM is listening on PORT: 80
+
+sudo ufw status
+
+* confirms ufw is not blocking anything as its currently showing inactive. 
+
+az network nsg rule list   --resource-group rg-devops-wus1   --nsg-name vm-arm-b2pts-01NSG   --output table
+
+* Output confirms the NSG rule DenyHTTP is blocking TCP connections from the internet to  port 80 on this VM. 
+
+
+az network nsg rule create \
+  --resource-group rg-devops-wus1 \
+  --nsg-name vm-arm-b2pts-01NSG \
+  --name AllowVotingApp \
+  --priority 100 \
+  --protocol Tcp \
+  --destination-port-range 80 \
+  --source-address-prefixes <your_IP> \
+  --access Allow
+
+* Security rule DenyHTTP conflicts with rule AllowVotingApp. Rules cannot have the same Priority and Direction. Lowest number allowed is 100 so cannot priortise it over the DenyHttp rule set earlier. 
+
+az network nsg rule update \
+  --resource-group rg-devops-wus1 \
+  --nsg-name vm-arm-b2pts-01NSG \
+  --name DenyHTTP \
+  --priority 200
+
+* to Uodate the priority on DenyHTTP rule set earlier. 
+
+
+az network nsg rule create \
+  --resource-group rg-devops-wus1 \
+  --nsg-name vm-arm-b2pts-01NSG \
+  --name AllowVotingApp \
+  --priority 100 \
+  --protocol Tcp \
+  --destination-port-range 80 \
+  --source-address-prefixes <Your_IP> \
+  --access Allow
+
+* Now since the DenyHTTP priority is set to 200, AllowHTTP set to priority 100 will take priority over DenyHTTP and will allow traffice as per the rule i.e. only from mu local machine. 
+
+curl http://<VM_IP>
+
+* Testing above from my local machine shows that the app is now reacheable from my machine. 
+
+
+## To test This NSG and ufw are independent layers:
+
+sudo ufw status 
+
+* Inactive
+
+sudo ufw enable
+
+sudo ufw deny 80
+
+curl http://<VM_IP>    {from my local machine}
+
+* app not reachable again from my local machine
+
+sudo ufw allow 80
+
+curl http://<VM_IP>    {from my local machine}
+
+* Output shows that the app is now reachable again from my machine. 
+
+## To test the SSH rule in the NSG
+
+az network nsg rule list \
+  --resource-group rg-devops-wus1 \
+  --nsg-name vm-arm-b2pts-01NSG \
+  --output table | grep 22
+
+* Output shows that SSH is allowed inbound on port 22 from any IP on the internet. 
+
+az network nsg rule update \
+  --resource-group rg-devops-wus1 \
+  --nsg-name vm-arm-b2pts-01NSG \
+  --name default-allow-ssh \
+  --source-address-prefixes <your_IP>
+
+* to lock down SSH only to my local machine. 
+
+
+
+
+
