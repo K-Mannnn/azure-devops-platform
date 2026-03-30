@@ -31,7 +31,51 @@ Key things I understood today:
 
 
 
+## W1 Wednesday Bash Challenge — Health Check Script
 
+Full script in week01/scripts/w1-wed-health-check.sh
+
+### What I built
+Script that checks if the voting app is healthy across three independent
+layers and exits 0 (healthy) or 1 (unhealthy) for use in CI/CD pipelines.
+
+### What I learned
+
+- Exit codes are the language of automation — printing a message is for
+  humans, exit 0/1 is for pipelines. CI/CD doesn't read your echo output,
+  it reads the exit code. This script is imported into the Act 2 pipeline.
+
+- Boolean flag pattern — set HEALTHY=true at the top, flip to false if any
+  check fails, exit based on the flag at the end. This lets all three checks
+  run and report independently rather than stopping at the first failure.
+
+- SSH command blocks — everything inside single quotes runs on the remote
+  machine. Commands outside run locally. Mixing them up is the most common
+  SSH scripting mistake. Process and port checks run over SSH, HTTP check
+  runs locally hitting the public IP.
+
+- awk quoting inside SSH blocks — single quotes conflict inside a single-quoted
+  SSH block. Fix with double quotes and escape $ as \$. Trips up experienced
+  engineers.
+
+- [ ] vs command in if statements — pgrep and curl return exit codes directly
+  so no [ ] needed. [ ] is only needed when comparing values like
+  "$HEALTHY" = true. [ is actually a command in bash, not syntax — it
+  needs spaces around its arguments.
+
+- Three checks in order:
+  1. pgrep -f app.py — is the process running? (over SSH)
+  2. ss -tlnp | grep :5000 — is the port listening? (over SSH)
+  3. curl -s -o /dev/null -w "%{http_code}" — does HTTP return 200? (local)
+
+### What tripped me up
+- $Healthy vs Healthy — no $ when setting a variable, always $ when reading it
+- Spaces inside [ ] — bash is strict, missing a space breaks the condition
+- sudo uses root's Python env — same issue as D1, same root cause
+- String vs numeric comparison — curl returns HTTP codes as strings,
+  use = not -eq
+
+  
 
 ## D3 — The Snowflake Problem
 
