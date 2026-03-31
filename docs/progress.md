@@ -58,6 +58,7 @@ To work on production grade scenarios, and solve more real life problems as the 
 - Basics of bash scripting, template, conditions, how to run it remotely, changing permissions to script file.
 - some Linux concepts such as difference between SIGTERM and SIGKILL and commands such as  ss -tlnp, ps aux, pgrep, journalctl.
 - Some Aure CLI commands to understand VM state and extract data from them. 
+- To run az commands on a VM in Azure, you have to install Azure CLI on it even though its already running in Azure. 
 
 
 ### What still confuses me
