@@ -32,3 +32,37 @@ I have devloped a very comprehensive list of things to do over 36 weeks. includi
 
 **What I am most looking forward to:**
 To work on production grade scenarios, and solve more real life problems as the project grows. 
+
+
+***********************************************************
+***********************************************************
+
+# Progress
+
+## Week 1 — Bare Metal to Containers
+**Completed:** [date]
+
+### What I built
+- Linux VM on Azure provisioned via CLI
+- Voting app running manually and as a systemd service
+- NSG and ufw rules configured and tested
+- Three Bash scripts: system state, health check, auto-deallocate
+- Runbook, snowflake doc, networking layers doc, ADR 001
+
+### What I understand now that I didn't before
+- Difference between manually running an app on a VM and systemd managing it
+- How to SSH securely to a cloud VM
+- How to manage SSH keys
+- Networking layers and connection between different cloud components such as the application, ufw, NSG. 
+- How to diagnose and troubleshoot app not running from inside out
+- Basics of bash scripting, template, conditions, how to run it remotely, changing permissions to script file.
+- some Linux concepts such as difference between SIGTERM and SIGKILL and commands such as  ss -tlnp, ps aux, pgrep, journalctl.
+- Some Aure CLI commands to understand VM state and extract data from them. 
+
+
+### What still confuses me
+- Need to understand Networking on more deeper level, especially Azure Vnet etc. 
+- Linux is an abyss, there's so much that goes under the hood that I'd like to develop a thorough understanding of. 
+- Azure CLI commands seem to have some limitations in terms of what information can be extracted. 
+- Seems like I haven't even scratched the surface with Bash Scripting. 
+
