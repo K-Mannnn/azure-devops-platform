@@ -294,3 +294,82 @@ curl -v http://<PUBLIC_IP>
 curl -v telnet://<PUBLIC_IP>:22
 
 * connection timed out because NSG doesn't allow traffic on port 22. 
+
+
+## Network Segmentation
+
+### Why each subnet is sized the way it is
+
+**snet-mgmt — 10.0.0.0/27 (27 usable IPs)**
+Management only — Azure Bastion, jump box. Never more than a handful
+of resources. A /27 gives 27 IPs which is plenty. Giving it a /24
+would waste 251 IPs on a subnet that holds 3 things.
+
+**snet-app — 10.0.1.0/24 (251 usable IPs)**
+Application servers. As the app grows — multiple VMs, load balancers,
+app service instances. A /24 gives room to scale without redesigning
+the network.
+
+**snet-data — 10.0.2.0/24 (251 usable IPs)**
+Databases and storage endpoints. Databases multiply as applications
+grow — PostgreSQL, Redis, analytics DB. Same reasoning as snet-app.
+
+**snet-aks — 10.0.3.0/23 (507 usable IPs)**
+Azure CNI mode allocates a real VNet IP to every pod, not just every
+node. A small cluster with 3 nodes × 30 pods = 90 pod IPs + 3 node
+IPs + 5 Azure reserved = 98 IPs minimum. Scale to 10 nodes × 30 pods
+= 305 IPs. A /24 runs out fast. A /23 gives 507 — enough headroom to
+scale without cluster migration.
+
+---
+
+### Why network segmentation matters
+
+The NSG rule on snet-data:
+  Allow port 5432 from 10.0.1.0/24 (snet-app) only
+  Deny all other inbound
+
+If the app layer gets compromised, an attacker inside snet-app can
+only reach snet-data on port 5432 — exactly the same way the
+legitimate app does. They cannot SSH into the database server, cannot
+hit any other port, cannot reach snet-mgmt directly.
+
+Without segmentation — one breach means full access to everything.
+With segmentation — the blast radius is contained to the compromised
+layer.
+
+The principle: every layer should only be reachable from the layer
+directly above it.
+  Internet → app layer → data layer
+  Never: Internet → data layer directly
+
+---
+
+### Connection to the Capital One breach (2019)
+Attacker compromised an EC2 instance (app layer) and from there
+reached S3 buckets (data layer) because no network segmentation
+blocked lateral movement. Proper segmentation would have contained
+the breach to the single compromised instance. 100 million records
+exposed as a result.
+
+---
+
+### Connection refused vs timeout — diagnostic distinction
+| Response | Meaning |
+|----------|---------|
+| Connection refused | Packet reached VM, nothing listening on that port |
+| Timeout | Packet never reached VM — NSG or firewall dropped it |
+
+Timeout = network problem — check NSG, ufw, routing
+Connection refused = network fine — check if app is running
+
+## Orphaned resource cleanup 
+
+When deleting a VM always check and delete:
+- NIC — no cost but clutters the resource group
+- OS Disk — costs money even when detached
+- Public IP — costs money even when unassociated
+- NSG (if VM-specific) — free but clutters
+
+az vm delete only removes the VM itself — associated
+resources must be deleted separately or use --ids flag.
