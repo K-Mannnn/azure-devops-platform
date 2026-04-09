@@ -34,3 +34,25 @@ Diagnostic: az network nsg rule list
 - Week 2: Docker adds its own network layer
 - Week 3: Terraform manages NSG rules as code
 - Week 5: Zero Trust — no public IPs at all
+
+
+## Week 2 — VNet topology
+
+VNet: vnet-devops (10.0.0.0/16) in rg-networking
+
+| Subnet    | CIDR          | Azure IPs | Purpose              | NSG            |
+|-----------|---------------|-----------|----------------------|----------------|
+| snet-mgmt | 10.0.0.0/27   | 27        | Bastion, management  | none yet       |
+| snet-app  | 10.0.1.0/24   | 251       | App servers          | nsg-snet-app   |
+| snet-data | 10.0.2.0/24   | 251       | Databases            | nsg-snet-data  |
+| snet-aks  | 10.0.4.0/23   | 507       | Kubernetes pods      | none yet       |
+
+## Network segmentation
+snet-data is not reachable from the internet.
+Port 5432 only allowed from 10.0.1.0/24 (snet-app).
+Traffic must flow through the application layer to reach the data layer.
+This applies whether the data layer is a VM, Azure SQL, or a K8s StatefulSet.
+
+## CIDR reference
+Usable Azure IPs = 2^(32-prefix) - 5
+/27 = 27 IPs | /24 = 251 IPs | /23 = 507 IPs
