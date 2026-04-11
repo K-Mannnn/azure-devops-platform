@@ -119,3 +119,172 @@ address, broadcast, host range, usable hosts and Azure IPs.
 - local ip=$ with no variable name — needed local ip=$1
 - $CIDR vs $1 inside function — function needs its own argument
 - Lowercase prefix vs PREFIX — bash variables are case sensitive
+
+
+# W2D3 - Everything that is DNS
+
+# DNS resolution flowchart
+
+[ You type: www.example.com ]
+                │
+                ▼
+[ Your Device (Browser / OS) ]
+                │
+                ▼
+[ Recursive Resolver ]
+(ISP or Public DNS like 8.8.8.8)        
+(This is usually your ISP resolver 
+however you can change these settings manually  
+or some browsers are automatically configured to override ISP resolver 
+and go to public one instead such as google.com)
+                │
+        ┌───────┴────────┐
+        │ Cached answer? │
+        └───────┬────────┘
+your machine or the recursive resolver may have cached answer 
+from previous requests to the ip requested if yes then it will 
+return the answer to you machine instead for looking further. 
+                │Yes
+                ▼
+        [ Return IP to you ]
+                │
+                ▼
+          [ Connect to site ]
+                
+                │No
+                ▼
+     [ Query Root Name Server ]
+If recursive server doesn't have cached answer then 
+it goes to 1 0f 13 root name servers which are spread all over the planet. 
+                │
+                ▼
+   "Ask the .com TLD server"
+The Root name then forwards the reuests to Top Level Domain (TLD)
+such as .com, .org, .net etc. The request has to go through 
+this route to know which authoritative server (next in line) to go to.                 │
+                ▼
+     [ Query TLD Server (.com) ]
+                │
+                ▼
+ "Ask authoritative server for example.com"
+This is the server that has matching list of relevant DNS:IP pairs.
+But it has to come via TLD server to reach the correct autoritative server. 
+                │
+                ▼
+[ Query Authoritative Name Server ]
+                │
+                ▼
+   "Here is the IP: 93.184.216.34"
+                │
+                ▼
+     [ Resolver caches result ]
+                │
+                ▼
+     [ Return IP to your device ]
+                │
+                ▼
+        [ Browser connects ]
+
+The DNS heirarchy is Root Server >> TLD server >> Authoritative server. 
+
+This heirarchy has to be followed to reach the correct authoritative server to get th IP address. 
+
+Only time its not needed is when your machine or recursive resolver has the answer cached from previous sessons. 
+
+# DNS records
+
+* DNS records have followin elements but not limited to. ALthough the list below is what's sufficient for purpose of this programme.
+
+* A / AAAA → where the website lives.   -- analogy: phone number
+ This is the ipv4 or ipv6 address for the website
+
+* CNAME → aliases                       -- analogy: nickname
+This the name for the domain such as example.com
+
+* MX → where email goes                 -- analogy: mail room
+MX record is needed if the website wants to receive emails, this is separate IP stored under MX records for which mail server to send emails to for this particular website. It is not cumpulsory thing, DNS records can not have MX record 
+i.e. not every website has MX records, such as landing pages etc.   
+
+* TXT → verification & security         -- analogy: notes, instructions
+A TXT record lets a domain publish plain text data that anyone can query via DNS. Its usually instructions and security measures such as “Is this server allowed to send email for this domain?”, 
+“Do you actually own this domain?”,
+“What security policy should I follow?”
+
+* NS → who’s in charge                  -- analogy: directory owner
+This is name of the authoritative name server as in which name server holds the DNS records. 
+This is where the DNS heirarchy is important and comes into play. 
+
+
+# TTL (Time to Live)
+
+* Time to live or TTL is what decides how long a DNS record can be cached on your resolver server. 
+
+* Its helpful to increase speed as without it every website request will have to go to the full DNS route. 
+
+* It includes the whole DNS records mentioned above i.e. A, MX records etc. 
+
+
+## Azure DNS & Resolver 
+# Azure DNS is authoritative, not recursive
+Azure DNS (DNS Zones) stores DNS records like:
+A, AAAA, CNAME, MX, TXT, NS
+It is the source of truth, not the system that answers queries.
+
+* DNS still flows:
+    User → Resolver → Root → TLD → Azure DNS → Answer
+
+# Azure internal resolver (168.63.129.16)
+A Microsoft-managed recursive DNS resolver with a fixed ip of 168.63.129.16
+Automatically available in every Azure Virtual Network (VNet)
+What it does:
+  * Resolves public internet domains (google.com, etc.)
+  * Resolves Azure private/internal DNS names
+  * Handles Azure networking DNS features (like Private Link resolution)
+What it is NOT:
+  * Not your ISP DNS
+  * Not globally reachable from the internet
+  * Not a replacement for Azure DNS zones
+Where it sits:
+
+  * VM → 168.63.129.16 → (Azure DNS + public DNS system)
+
+# Azure Private DNS Zones
+What they are:
+  * DNS zones that exist only inside Azure VNets
+Purpose:
+  * Map private names → private IPs
+
+Example:
+
+  * db.internal.contoso.com → 10.0.1.4
+  * api.internal.contoso.com → 10.0.1.5
+
+Key properties:
+
+  * Not visible on the public internet
+  * Only accessible from linked VNets
+  * Used for internal services and microservices
+
+# How resolution works in Azure
+
+Inside a VM:
+
+VM → 168.63.129.16 → Private DNS Zone (if applicable) → IP
+
+If not private:
+
+VM → 168.63.129.16 → Internet DNS → Public IP
+
+# What “Azure internal names” actually means
+
+It refers to:
+
+  * Your private DNS zones
+  * Azure service private endpoints
+  * Internal VNet-resolvable names
+
+It does NOT mean:
+
+  * All Azure resources globally
+  * Other companies’ networks
+  * Public Azure-wide name discovery

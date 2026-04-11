@@ -56,3 +56,42 @@ This applies whether the data layer is a VM, Azure SQL, or a K8s StatefulSet.
 ## CIDR reference
 Usable Azure IPs = 2^(32-prefix) - 5
 /27 = 27 IPs | /24 = 251 IPs | /23 = 507 IPs
+
+
+
+### Resolver chain on every Azure VM
+App
+  → 127.0.0.53 (systemd-resolved — local cache)
+    → 168.63.129.16 (Azure internal resolver)
+      → devops-lab.internal (private zone — VNet only)
+      → public internet (google.com → root → TLD → authoritative)
+
+168.63.129.16 — Azure's virtual IP, intercepted by Azure fabric.
+Configured automatically on every VM that joins a VNet. Not a real
+server — a virtual IP that Azure routes to its DNS infrastructure.
+Handles both jobs: private zone resolution and public DNS forwarding.
+
+### Resolution order on every Azure VM
+1. /etc/hosts — checked first, overrides everything
+2. /etc/resolv.conf → 127.0.0.53 → 168.63.129.16
+3. Private zone (devops-lab.internal) if query matches
+4. Public internet if no private match
+
+### Private DNS Zone — devops-lab.internal
+Linked to vnet-devops with auto-registration enabled.
+Resolves only from inside vnet-devops — NXDOMAIN from outside.
+Auto-registration: VM records created/deleted automatically on
+VM creation/deletion. TTL 10s on auto-registered records.
+Manual records default TTL 3600s.
+
+### Verified
+test-server.devops-lab.internal → 10.0.1.10 (manual record)
+vm-dns-test-1.devops-lab.internal → 10.0.1.4 (auto-registered)
+Both resolve from inside VNet via 168.63.129.16.
+Neither resolves from outside — NXDOMAIN confirmed.
+
+### Debug order for any connectivity issue
+1. DNS resolving correctly? — dig, nslookup
+2. Route to destination exists? — netstat -rn, ip route
+3. Firewall/NSG allowing? — ufw status, az network nsg rule list
+4. Application listening? — ss -tlnp, curl localhost:PORT

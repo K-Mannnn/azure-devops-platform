@@ -373,3 +373,164 @@ When deleting a VM always check and delete:
 
 az vm delete only removes the VM itself — associated
 resources must be deleted separately or use --ids flag.
+
+
+# W2D3 - Everything that is DNS
+
+Creating a new VM for DNS testing: ALthough needed 2 VMs for full DNS testing but due quota limitations making it work with just 1. 
+
+az vm create \
+  --name vm-dns-test-1 \
+  --resource-group rg-compute \
+  --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-arm64:latest \
+  --size Standard_B2pts_v2 \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --subnet "/subscriptions/b73aa262-f80d-4fbf-8cc3-549feae1e348/resourceGroups/rg-networking/providers/Microsoft.Network/virtualNetworks/vnet-devops/subnets/snet-app"
+  --nsg "" \
+  --tags environment=dev managed-by=manual week=2 
+
+* ssh into the VM
+
+sudo apt install -y dnsutils
+
+dig +trace google.com
+dig google.com +short
+dig google.com @8.8.8.8 +short
+dig google.com @168.63.129.16 +short
+cat /etc/resolv.conf
+resolvectl status
+
+
+#### What the dig +trace showed
+Full resolution chain for google.com:
+127.0.0.53 → i.root-servers.net → l.gtld-servers.net → ns2.google.com → 172.217.12.110
+
+Hop 1 — Root nameservers
+Query started at local resolver 127.0.0.53 (systemd-resolved).
+Returned the 13 root nameservers. TTL 513027s (~6 days) — cached heavily.
+IPv6 errors appeared (network unreachable) — VM has no IPv6, fell back
+to IPv4 automatically. Normal behaviour.
+
+Hop 2 — TLD nameservers
+Root server i.root-servers.net returned 13 gtld-servers for .com.
+TTL 172800s (48 hours). Also returned DNSSEC signatures (DS, RRSIG)
+— ignore for now.
+
+Hop 3 — Authoritative nameservers
+TLD server l.gtld-servers.net returned Google's own nameservers:
+ns1-4.google.com. TTL 172800s (48 hours).
+
+Hop 4 — Final answer
+Google's ns2.google.com returned 172.217.12.110.
+TTL 300s (5 minutes) — Google keeps this low for IP rotation across
+their global server fleet. Total resolution time ~225ms across 3 hops.
+
+#### Interesting observations
+- dig @8.8.8.8 returned a different Google IP (142.251.219.14) than
+  the default resolver. Both valid — Google load balances across many
+  IPs globally. Different resolvers route to different datacentres.
+
+- /etc/resolv.conf shows nameserver 127.0.0.53 — that's systemd-resolved
+  running locally on the VM as a caching layer. It forwards upstream
+  to 168.63.129.16 (Azure's resolver).
+
+- resolvectl status confirmed:
+  Current DNS Server: 168.63.129.16
+  Azure injected this automatically when the VM joined the VNet.
+  No manual configuration needed.
+
+- Search domain auto-configured by Azure:
+  xrz3452bog5etdjoxhiarygbza.dx.internal.cloudapp.net
+  Allows short hostname resolution between VMs in the same VNet
+  without typing the full domain.
+
+#### Full resolver chain
+App → 127.0.0.53 (systemd-resolved, local cache)
+    → 168.63.129.16 (Azure resolver)
+      → private zones (devops-lab.internal)
+      → public internet (google.com → root → TLD → authoritative)
+
+
+### Created private DNS zone
+
+az network private-dns zone create \
+  --resource-group rg-networking \
+  --name devops-lab.internal
+
+### Linked it to existing vnet
+
+az network private-dns link vnet create \
+  --resource-group rg-networking \
+  --zone-name devops-lab.internal \
+  --name link-vnet-devops \
+  --virtual-network vnet-devops \
+  --registration-enabled true
+
+# List records — check auto-registration
+az network private-dns record-set list \
+  --resource-group rg-networking \
+  --zone-name devops-lab.internal \
+  --output table
+
+# Add manual A record
+az network private-dns record-set a add-record \
+  --resource-group rg-networking \
+  --zone-name devops-lab.internal \
+  --record-set-name test-server \
+  --ipv4-address 10.0.1.10
+
+# Verify from inside VNet
+dig test-server.devops-lab.internal @168.63.129.16
+dig vm-dns-test-1.devops-lab.internal @168.63.129.16
+
+# Verify does NOT resolve from outside
+dig test-server.devops-lab.internal
+
+
+#### What happened
+Private DNS zone devops-lab.internal created as a global resource —
+not tied to a region, linked to VNets instead.
+
+Auto-registration proved — the moment the VNet link was established
+Azure automatically created an A record for vm-dns-test-1:
+  vm-dns-test-1.devops-lab.internal → 10.0.1.4
+  isAutoRegistered: true, TTL: 10s
+Azure keeps auto-registered TTL low (10s) so DNS updates quickly
+when VMs are created or deleted.
+
+Manual record added:
+  test-server.devops-lab.internal → 10.0.1.10
+  TTL: 3600s (1 hour) — default for manual records
+
+#### Verification results
+From inside VNet (via 168.63.129.16):
+  test-server.devops-lab.internal → 10.0.1.10  NOERROR ✅
+  vm-dns-test-1.devops-lab.internal → 10.0.1.4  NOERROR ✅
+  Response time: 3ms
+
+From local machine (via home router 192.168.1.254):
+  test-server.devops-lab.internal → NXDOMAIN ✅
+  Private zone genuinely not reachable from outside the VNet.
+
+#### Key concepts proved
+- Private DNS zones are truly private — NXDOMAIN from outside confirms it
+- Auto-registration removes manual DNS management for VMs entirely
+- 168.63.129.16 handles both private zone resolution and public DNS
+  forwarding — one resolver, two jobs
+- Private zone location is global — linked to VNets not regions
+
+#### TTL implications
+TTL on test-server record: 3600s (1 hour)
+A record with TTL 3600 takes up to 1 hour to propagate after changes.
+
+DNS cutover procedure:
+1. Reduce TTL to 60s
+2. Wait 1 hour for existing cached records to expire
+3. Make the DNS change
+4. Verify resolution is correct
+5. Restore TTL to 3600
+
+Why wait an hour after reducing TTL? Records cached before the TTL
+reduction still have up to 3600s left. Must wait for all caches to
+expire before the new low TTL takes effect.
