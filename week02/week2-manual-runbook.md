@@ -534,3 +534,158 @@ DNS cutover procedure:
 Why wait an hour after reducing TTL? Records cached before the TTL
 reduction still have up to 3600s left. Must wait for all caches to
 expire before the new low TTL takes effect.
+
+
+### W2D4 -- Azure Bastion and Private End Points
+
+# Create a storage account
+
+# Storage account names must be globally unique, lowercase, 3-24 chars
+az storage account create \
+  --name devopsevolution$RANDOM \
+  --resource-group rg-data \
+  --location westus \
+  --sku Standard_LRS \
+  --tags environment=dev managed-by=manual week=2
+
+
+# Retrieve the Storgae account FQDN: 
+
+az storage account show \
+  --name devopsevolution2852 \
+  --resource-group rg-data \
+  --query primaryEndpoints.blob \
+  --output tsv
+
+
+# Get the storage account resource ID
+STORAGE_ID=$(az storage account show \
+  --name <YOUR_STORAGE_NAME> \
+  --resource-group rg-data \
+  --query id \
+  --output tsv)
+
+# Create private endpoint
+az network private-endpoint create \
+  --name pe-storage \
+  --resource-group rg-networking \
+  --vnet-name vnet-devops \
+  --subnet snet-data \
+  --private-connection-resource-id $STORAGE_ID \
+  --group-id blob \
+  --connection-name pe-storage-connection \
+  --tags environment=dev managed-by=manual week=2
+
+az network private-dns zone create \
+  --resource-group rg-networking \
+  --name privatelink.blob.core.windows.net
+
+az network private-dns link vnet create \
+  --resource-group rg-networking \
+  --zone-name privatelink.blob.core.windows.net \
+  --name link-storage \
+  --virtual-network vnet-devops \
+  --registration-enabled false
+
+# Create DNS zone group — links private endpoint to DNS zone
+az network private-endpoint dns-zone-group create \
+  --resource-group rg-networking \
+  --endpoint-name pe-storage \
+  --name storage-zone-group \
+  --private-dns-zone privatelink.blob.core.windows.net \
+  --zone-name blob
+
+# Testing the private and public endpoints
+
+* From your laptop
+dig devopsevolution2852.blob.core.windows.net
+
+- resolved to a public IP. 
+
+ssh azureuser@<Your_VM>
+
+dig devopsevolution2852.blob.core.windows.net
+
+- resolved to a private IP
+
+# Disable the public access:
+
+az storage account update \
+  --name <YOUR_STORAGE_NAME> \
+  --resource-group rg-data \
+  --public-network-access Disabled
+
+# Test access fro your laptop
+
+az storage blob list \
+  --account-name <YOUR_STORAGE_NAME> \
+  --container-name test \
+  --auth-mode login
+
+* access denied. 
+
+# On the VM
+curl -I https://<YOUR_STORAGE_NAME>.blob.core.windows.net
+
+- Private end poit reached successfully. 
+
+# Deploy Bastion
+
+# Create the required subnet 
+az network vnet subnet create \
+  --name AzureBastionSubnet \
+  --vnet-name vnet-devops \
+  --resource-group rg-networking \
+  --address-prefix 10.0.0.64/26
+
+# Create public IP for Bastion 
+az network public-ip create \
+  --name pip-bastion \
+  --resource-group rg-networking \
+  --sku Standard \
+  --location westus \
+  --tags environment=dev managed-by=manual week=2
+
+# Deploy Bastion 
+az network bastion create \
+  --name bastion-devops \
+  --resource-group rg-networking \
+  --vnet-name vnet-devops \
+  --public-ip-address pip-bastion \
+  --location westus \
+  --tags environment=dev managed-by=manual week=2
+
+# Test connection to VM via Bastion
+
+az network bastion ssh \
+  --name bastion-devops \
+  --resource-group rg-networking \
+  --target-resource-id $(az vm show \
+    --resource-group rg-compute \
+    --name vm-dns-test-1 \
+    --query id --output tsv) \
+  --auth-type ssh-key \
+  --username azureuser 
+
+* Failed due to Bastion Sku being basic and minimum required for SSH is Standard or Premium
+
+az network bastion update \
+  --name bastion-devops \
+  --resource-group rg-networking \
+  --sku "{name:Standard}"
+
+* Also need to toggle 'Native Client Support' in the Azure portal. 
+
+az network bastion ssh \
+  --name bastion-devops \
+  --resource-group rg-networking \
+  --target-resource-id $(az vm show \
+    --resource-group rg-compute \
+    --name vm-dns-test-1 \
+    --query id --output tsv) \
+  --auth-type ssh-key \
+  --username azureuser \
+  --ssh-key ~/.ssh/Your_Key
+
+- ssh successful!! 
+

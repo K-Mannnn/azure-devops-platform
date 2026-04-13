@@ -288,3 +288,48 @@ It does NOT mean:
   * All Azure resources globally
   * Other companies’ networks
   * Public Azure-wide name discovery
+
+
+  # W2D4 - Azure Bastion and Private end points
+
+  🔐 Azure Bastion vs Jumpbox (Why Bastion is better)
+
+In traditional cloud architectures, a jumpbox (bastion host VM) is used as a secure entry point into a private network. You SSH/RDP into the jumpbox, then hop to other VMs inside the VNet. However, this approach introduces operational overhead and security risks.
+
+With Azure Bastion, Azure provides a fully managed alternative that improves security, simplicity, and scalability.
+
+🆚 Key differences
+
+🖥️ Jumpbox (traditional approach)
+A manually managed VM inside the VNet
+Requires a public IP for access (unless accessed via VPN)
+You must:
+ * Patch the OS
+ * Harden SSH/RDP
+ * Monitor and maintain the VM
+ * Often becomes a single point of failure
+ * Requires opening inbound ports (22/3389) to some extent
+ * Scaling requires building additional jumpbox VMs
+
+☁️ Azure Bastion (managed approach)
+ * ully managed service deployed inside a VNet
+ * rovides RDP/SSH access via the Azure Portal over HTTPS (443)
+ * o public IP required on target VMs
+ * o need to expose SSH/RDP ports at all
+ * icrosoft handles:
+ * atching
+ * igh availability
+ * ardening
+ * upports multiple VMs from a single Bastion instance
+
+🔐 Security advantages of Bastion
+ * Eliminates public exposure of VMs
+ * Reduces attack surface (no open 22/3389 ports)
+ * Centralized access control via Azure RBAC + MFA
+ * No need to manage OS-level security on a jumpbox VM
+
+⚙️ Operational advantages
+ * No VM maintenance (unlike jumpbox)
+ * Faster setup (no custom VM configuration required)
+ * Scales across many VMs in the same VNet or peered VNets
+ * Browser-based access (no need for local SSH/RDP clients)
