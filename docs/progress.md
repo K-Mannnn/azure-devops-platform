@@ -67,3 +67,31 @@ To work on production grade scenarios, and solve more real life problems as the 
 - Azure CLI commands seem to have some limitations in terms of what information can be extracted. 
 - Seems like I haven't even scratched the surface with Bash Scripting. 
 
+
+## Week 2 - ## Week 2 — Azure Networking Done Right
+**Completed:** 14/04/2026
+
+### What I built
+- Azure organisational hierarchy understood — tenant to resource
+- Three resource groups by lifecycle — networking, compute, data
+- VNet with four subnets — CIDR calculated manually
+- NSGs with network segmentation — data layer unreachable from internet
+- Private DNS Zone with auto-registration
+- Private Endpoint for storage — no public access
+- Azure Bastion — SSH without public IPs
+- Log Analytics Workspace with diagnostic settings
+- KQL queries for NSG denies, CPU alerts, failed auth
+- CPU alert rule firing on threshold
+
+### What I understand now that I didn't before
+- Azure DNS settings
+- CIDR notations and how to calculate subnets
+- How to convert IP addresses to integers and other way around
+- How to set up bastion and its uses etc. 
+- Azure monitoring - its components and uses. 
+- Mathematical calucaltions in bash scripting
+
+### What still confuses me
+- This week was another layer of networking uncovered i.e. DNS, Subnets etc. but still a lot more to it. 
+- Although touched a bit of monitoring but running some basic KQL queries unveiled the depth of Azure monitoring and how much more there is to it. 
+- The connection between subnets, resource groups, NSGs etc. there were instances this week where incorrect NSG were applied to resources, and resources from different resource groups were unable to communicate efficiently due to incorrect rules set.  

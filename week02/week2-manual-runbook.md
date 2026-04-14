@@ -386,8 +386,8 @@ az vm create \
   --size Standard_B2pts_v2 \
   --admin-username azureuser \
   --generate-ssh-keys \
-  --subnet "/subscriptions/b73aa262-f80d-4fbf-8cc3-549feae1e348/resourceGroups/rg-networking/providers/Microsoft.Network/virtualNetworks/vnet-devops/subnets/snet-app"
-  --nsg "" \
+  --subnet "/subscriptions/b73aa262-f80d-4fbf-8cc3-549feae1e348/resourceGroups/rg-networking/providers/Microsoft.Network/virtualNetworks/vnet-devops/subnets/snet-app" \
+  --nsg "nsg-snet-app" \
   --tags environment=dev managed-by=manual week=2 
 
 * ssh into the VM
@@ -689,3 +689,118 @@ az network bastion ssh \
 
 - ssh successful!! 
 
+
+## W2D5 -- Azure Monitor, Cost Controls, and the Operational Baseline
+
+# Create Log analytics workspace 
+
+az monitor log-analytics workspace create \
+  --resource-group rg-networking \
+  --workspace-name law-devops-evolution \
+  --location westus \
+  --tags environment=dev managed-by=manual week=2
+
+- Retrieve the workspace ID: 
+
+LAW_ID=$(az monitor log-analytics workspace show \
+  --resource-group rg-networking \
+  --workspace-name law-devops-evolution \
+  --query id \
+  --output tsv)
+
+echo $LAW_ID
+
+
+# Enable Diagnostic settings -- Route vnet and NSG traffic into the workspace. 
+
+# Get VNet resource ID
+VNET_ID=$(az network vnet show \
+  --name vnet-devops \
+  --resource-group rg-networking \
+  --query id --output tsv)
+
+# Enable diagnostics on VNet
+az monitor diagnostic-settings create \
+  --name diag-vnet-devops \
+  --resource $VNET_ID \
+  --workspace $LAW_ID \
+  --logs '[{"category": "VMProtectionAlerts", "enabled": true}]' \
+  --metrics '[{"category": "AllMetrics", "enabled": true}]'
+
+# Get NSG resource ID
+NSG_APP_ID=$(az network nsg show \
+  --name nsg-snet-app \
+  --resource-group rg-networking \
+  --query id --output tsv)
+
+# Enable diagnostics on NSG
+az monitor diagnostic-settings create \
+  --name diag-nsg-snet-app \
+  --resource $NSG_APP_ID \
+  --workspace $LAW_ID \
+  --logs '[
+    {"category": "NetworkSecurityGroupEvent", "enabled": true},
+    {"category": "NetworkSecurityGroupRuleCounter", "enabled": true}
+  ]'
+
+* the rules set above for NSG didn't produce any logs - had to change the diagnostic settings under NSG to 'all logs'
+
+# Tested some common KQL queries: 
+
+AzureDiagnostics
+| where TimeGenerated > ago(24h)
+| where Category == "NetworkSecurityGroupRuleCounter"
+| extend Port = tostring(conditions_destinationPortRange_s)
+| extend Rule = tostring(ruleName_s)
+| summarize HitCount = count() by Port, Rule
+| order by HitCount desc
+
+# Installed Azure Monitoring agent: 
+
+az vm extension set \
+  --resource-group rg-compute \
+  --vm-name vm-dns-test-1 \
+  --name AzureMonitorLinuxAgent \
+  --publisher Microsoft.Azure.Monitor \
+  --version 1.0
+
+
+## Setting up and Alert
+
+# Get VM resource ID
+VM_ID=$(az vm show \
+  --resource-group rg-compute \
+  --name vm-dns-test-1 \
+  --query id --output tsv)
+
+# Create action group for email
+az monitor action-group create \
+  --resource-group rg-networking \
+  --name ag-devops-alerts \
+  --short-name devopsalert \
+  --action email admin YOUR@EMAIL.COM
+
+# Get action group ID
+AG_ID=$(az monitor action-group show \
+  --resource-group rg-networking \
+  --name ag-devops-alerts \
+  --query id --output tsv)
+
+# Create CPU alert
+az monitor metrics alert create \
+  --name alert-cpu-high \
+  --resource-group rg-networking \
+  --scopes $VM_ID \
+  --condition "avg Percentage CPU > 80" \
+  --window-size 5m \
+  --evaluation-frequency 1m \
+  --action $AG_ID \
+  --description "VM CPU over 80% for 5 minutes"
+
+ssh azureuser@VM_IP
+
+sudo apt install -y stress
+
+stress --cpu 2 --timeout 360
+
+- Received an email alert after 5 minutes that cpu usage was high over 5 minutes. 

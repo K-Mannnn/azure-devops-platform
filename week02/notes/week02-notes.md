@@ -333,3 +333,43 @@ You must:
  * Faster setup (no custom VM configuration required)
  * Scales across many VMs in the same VNet or peered VNets
  * Browser-based access (no need for local SSH/RDP clients)
+
+ # W2D5 -- Azure Monitor, Cost Controls, and the Operational Baseline
+
+ Today I'm learnt about Azure Monitor and its components such as Log analytics workspace, KQL (Kusto Query Language), Alerts etc. 
+
+ The key components of Azure monitor are: 
+
+ * Resources -- where logs come from
+
+ * Azure Log analytics workspace -- where the logs go, you run KQL queries here. 
+
+ * Metrics Store - used for charts etc. but handled by Azure so no set up required
+
+ * Azure Monitor Agent 
+
+ * Data Collection Rules
+
+ * Analysis tools such as KQL, VM insights, Workbooks (dashboards)
+
+ * Alerts -- sets rules and trigger emails. 
+
+ Azure Log analytics workspace
+
+ * Azure Log Analytics Workspace is basically a central storage + analysis environment for logs and telemetry data in Azure
+
+ * Its part of Azure monitor and essentially brain for all the logging data in Azure. 
+
+ * You can send logs to Log analytics workspace from different resources such VMs, Storgae, networking etc. 
+  - Resources → Log Analytics Workspace → KQL Queries → Insights / Alerts
+ 
+ * Enables monitoring + security + troubleshooting in one place
+
+ * Uses KQL for fast querying
+
+ Created the Log analytics workspace and directed traffic from nsg-snet-app and vnet-devops into it. However ran into issue when created the VM as correct nsg wasn't being applied. 
+
+ Diagnostic settings were only set to NetworkSecurityGroupEvent" and "NetworkSecurityGroupRuleCounter" to start with and no logs were produced. Changed the setting to all logs and logs started to appear. 
+ 
+ Resource emits categories → only if category actually produces events
+→ only then sent to workspace
