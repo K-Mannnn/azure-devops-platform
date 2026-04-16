@@ -33,3 +33,5 @@ Internet (port 5000)
 ### Next week
 Docker — the full voting app stack running in containers.
 The manual install pain disappears. The Redis error gets fixed.
+
+![alt text](diagram-1776372710050-1.svg)

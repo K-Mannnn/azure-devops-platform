@@ -95,3 +95,12 @@ To work on production grade scenarios, and solve more real life problems as the 
 - This week was another layer of networking uncovered i.e. DNS, Subnets etc. but still a lot more to it. 
 - Although touched a bit of monitoring but running some basic KQL queries unveiled the depth of Azure monitoring and how much more there is to it. 
 - The connection between subnets, resource groups, NSGs etc. there were instances this week where incorrect NSG were applied to resources, and resources from different resource groups were unable to communicate efficiently due to incorrect rules set.  
+
+### Pain points so far
+- Every bit of infrastructure was built manually, creating VMs and other resources and manually deleting them end of session to save costs. 
+- Creating same resources manually from scratch repeatedly day after day is very time consuming. 
+- Remembering every single step you took the previous day to create resources even though manual runbooks contains all the steps, there are minor details that get missed out to re-create same resource with same configuration. 
+- Infrastructure is getting bigger and hard to keep a mental note of everything. 
+- The Networking and connected resources layers are becoming complex, again hard to maintain mental map of everything. 
+
+
