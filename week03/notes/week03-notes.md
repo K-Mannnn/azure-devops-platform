@@ -62,3 +62,357 @@ This single tag change signals to anyone looking at a resource whether
 it is safe to destroy and recreate (terraform) or was hand-crafted
 and needs care (manual). In enterprise environments this distinction
 has real operational implications.
+
+
+### W3D2 -- Building with Terraform continues
+
+# Terraform Basics — Quick Summary
+
+1. File Structure (Why split .tf files?)
+
+Terraform treats all .tf files in a directory as one configuration.
+
+Splitting files like:
+
+main.tf
+variables.tf
+locals.tf
+network.tf
+outputs.tf
+
+is for humans, not Terraform.
+
+* Why it’s done:
+Improves readability
+Reduces merge conflicts in teams
+Groups related logic (network, variables, outputs)
+Prepares for modular, scalable infrastructure
+
+2. Terraform Language
+
+Terraform uses HashiCorp Configuration Language (HCL).
+
+Key traits:
+Human-readable (cleaner than JSON)
+Supports comments
+Supports expressions and functions
+JSON is supported, but rarely used
+
+3. Variables (Inputs)
+
+Example:
+
+variable "location" {
+  type    = string
+  default = "westus"
+}
+What this means:
+Defines an input called location
+Can be used anywhere as:
+var.location
+
+4. Passing Values to Variables
+
+Terraform doesn’t guess values—you provide them.
+
+Common ways:
+1. terraform.tfvars
+location = "uksouth"
+
+2. Custom file
+terraform apply -var-file="dev.tfvars"
+
+3. CLI
+terraform apply -var="location=uksouth"
+
+4. Environment variable
+export TF_VAR_location="uksouth"
+Priority Order (highest wins)
+ - CLI > tfvars file > terraform.tfvars > env vars > default
+
+5. Validation (Input Rules)
+
+Example:
+
+validation {
+  condition     = contains(["westus", "uksouth"], var.location)
+  error_message = "Invalid region"
+}
+Purpose:
+Restricts allowed values
+Fails early with clear errors
+
+## Locals (Computed Values)
+
+Locals are **internal values** you define inside Terraform to avoid repetition and keep things consistent.
+
+They are written using a `locals` block:
+
+```hcl
+locals {
+  resource_prefix = "${var.project}-${var.environment}"
+
+  common_tags = {
+    environment = var.environment
+    owner       = var.owner
+    project     = var.project
+  }
+}
+```
+
+---
+
+### What locals are
+
+* Values **computed from variables or other data**
+* Used **only inside your Terraform config**
+* Not provided by the user
+
+---
+
+### How to use them
+
+Access locals like this:
+
+```hcl
+local.resource_prefix
+local.common_tags
+```
+
+Example:
+
+```hcl
+name = "${local.resource_prefix}-vnet"
+tags = local.common_tags
+```
+
+---
+
+### Why use locals
+
+#### 1. Avoid repetition
+
+Instead of repeating:
+
+```hcl
+"${var.project}-${var.environment}"
+```
+
+You define it once:
+
+```hcl
+local.resource_prefix
+```
+
+---
+
+#### 2. Keep things consistent
+
+All resources use:
+
+```hcl
+tags = local.common_tags
+```
+
+No risk of missing or inconsistent tags.
+
+---
+
+#### 3. Centralize logic
+
+If naming or tagging changes, update it in one place.
+
+---
+
+### Variables vs Locals
+
+| Feature    | Variables (`var`) | Locals (`local`)        |
+| ---------- | ----------------- | ----------------------- |
+| Source     | Provided by user  | Defined in code         |
+| Purpose    | Input             | Computed/reusable value |
+| Mutability | Can be overridden | Fixed                   |
+
+---
+
+### Mental model
+
+```text
+Variables → Inputs (external)
+Locals    → Helpers (internal)
+```
+
+---
+
+### When to use locals
+
+Use locals when you:
+
+* Repeat the same value multiple times
+* Build naming conventions
+* Define shared tags
+* Combine or transform variables
+
+---
+
+### Key takeaway
+
+Locals make your Terraform:
+
+* Cleaner
+* DRYer (Don’t Repeat Yourself)
+* Easier to maintain
+
+They don’t add new functionality—they make your configuration **much easier to manage at scale**.
+
+
+## Terraform Core Reference Rules
+
+# Blocks vs References (most important rule)
+
+* Definition block	    How you reference it
+variable {}	          var.
+locals {}	            local.
+resource {}	          resource_type.name or resource_type.name.attribute
+data {}	              data.<type>.<name>
+output {}	            output.<name> (CLI/state reference)
+module {}	            module.<name>
+
+- This is how you reference values from different block, more notable ones are locals uses singular local. 
+ -- e.g. 
+ locals {
+  resource_prefix = "${var.project}-${var.environment}"
+
+  common_tags = {
+    environment  = var.environment
+    owner        = var.owner
+    project      = var.project
+    managed-by   = "terraform"
+    week         = "3"
+  }
+}
+
+- But when you reference it in terraform it will be 
+
+tags = local.common_tags
+
+
+# Terraform Outputs
+
+Outputs are values that Terraform **returns after creating infrastructure**. They are used to expose useful information from your deployment.
+
+---
+
+## What outputs do
+
+They define what Terraform should **display or export** after `terraform apply`.
+
+Example:
+
+```hcl id="o8k2qp"
+output "resource_group_name" {
+  value = azurerm_resource_group.networking.name
+}
+```
+
+After apply:
+
+```text id="v1m9qp"
+resource_group_name = "rg-networking"
+```
+
+---
+
+## Purpose of outputs
+
+Outputs are used to:
+
+* Show important values after deployment
+* Pass data between modules
+* Integrate with CI/CD pipelines
+* Share IDs, IPs, or names of created resources
+
+---
+
+## Common examples
+
+### Resource ID
+
+```hcl id="t2p8mq"
+output "vnet_id" {
+  value = azurerm_virtual_network.vnet.id
+}
+```
+
+---
+
+### Public IP
+
+```hcl id="x7k1ld"
+output "vm_public_ip" {
+  value = azurerm_public_ip.vm.ip_address
+}
+```
+
+---
+
+### Subnet ID
+
+```hcl id="q3m9sn"
+output "app_subnet_id" {
+  value = azurerm_subnet.app.id
+}
+```
+
+---
+
+## When outputs are shown
+
+After running:
+
+```bash id="k8v2qp"
+terraform apply
+```
+
+Terraform prints:
+
+```text id="m9v2qp"
+Outputs:
+
+vm_public_ip = 20.50.10.4
+```
+
+---
+
+## How outputs are used
+
+### 1. CLI visibility
+
+Used to quickly see important deployment results.
+
+---
+
+### 2. Module communication
+
+One module can expose outputs:
+
+```hcl id="d2m8qp"
+module.network.vnet_id
+```
+
+---
+
+### 3. CI/CD pipelines
+
+Used in automation tools (GitHub Actions, Azure DevOps) to pass values to later stages.
+
+---
+
+## Mental model
+
+```text id="n7q2mv"
+inputs  → variables
+logic   → resources + locals
+outputs → results after deployment
+```
+
+
