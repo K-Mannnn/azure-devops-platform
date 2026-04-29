@@ -523,3 +523,18 @@ terraform {
     }
   }
 }
+
+### Moment of Truth
+
+terraform init
+terraform plan
+
+- can see an enormous list of resources to be created in the plan, especially a long list under storage account
+
+terraform apply 
+
+* Magic!! Created all that in 5 mins, what took me a whole week last week. 
+
+terraform destroy
+
+* Even more importantly -- destroyed everything in a few minutes. 

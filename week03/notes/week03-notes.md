@@ -415,4 +415,22 @@ logic   → resources + locals
 outputs → results after deployment
 ```
 
+### W3D3 -- Remote State and State Locking — Production Terraform
+
+* Creating a stroage account for Terraform state, the Premise being there's one state file which is held and maintained rempotely and has a lock on it so only one person working on it at any given time. This will avoid multiple people running Terraform apply and creating duplicates or causing terraform apply to crash. 
+
+-  Storage account itself is blob storage in this case. It needs versioning enabled so each terraform apply is run it creates a new state file with a version instead of overwriting it. This allows rolling back to previous versions easy if something goes wrong. 
+
+- Storage account also need to have Soft delete enabled for 30 days. So If someone accidenatally deletes the storage account then the terraform state will be lost. Soft delete prohibits this loss by allowing a 30 days window to recover what was deleted. 
+
+- Azure doesn't allow blobs at root of a storage account, so you need to create a container. so it looks like this: 
+Storage Account (like a top-level bucket)
+└── Container (like a folder / namespace)
+    └── Blobs (files)
+
+Storage Account: tfstateXXXXX
+└── Container: tfstate
+    └── act1/terraform.tfstate
+
+
 
