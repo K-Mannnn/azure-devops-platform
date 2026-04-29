@@ -538,3 +538,82 @@ terraform apply
 terraform destroy
 
 * Even more importantly -- destroyed everything in a few minutes. 
+
+
+### W3 D3 - - Remote State and State Locking — Production Terraform
+
+# Creating a bash script to create the following: 
+- Storage account for terraform state
+- Create a container for tf state files
+- enable versioning
+- enable soft delete 30 days
+
+script can be found in ./scripts/w3-wed-bootstrap-state.sh
+
+# Creating terraform remote backend: 
+
+Added the following to main.tf: 
+
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+
+  backend "azurerm" {
+    resource_group_name  = "rg-terraform-state"
+    storage_account_name = "tfstatedevopsevolution"
+    container_name       = "tfstate"
+    key                  = "act1/terraform.tfstate"
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+terraform init
+
+terraform plan
+
+terraform apply 
+
+# To test state locking: 
+
+- From terminal window 1
+terraform apply
+
+- From terminal window 2 (immediately after the above)
+terraform apply
+
+- second terminal window output: 
+ Error: Error acquiring the state lock
+│ 
+│ Error message: state blob is already locked
+│ Lock Info:
+│   ID:        01989724-625c-af9a-4645-a333d432a305
+│   Path:      tfstate/act1/terraform.tfstate
+│   Operation: OperationTypeApply
+│   Who:       kiran@kiranpals-MBP.lan
+│   Version:   1.14.9
+│   Created:   2026-04-29 21:27:23.551257 +0000 UTC
+│   Info:      
+│ 
+│ 
+│ Terraform acquires a state lock to protect the state from being written
+│ by multiple users at the same time. Please resolve the issue above and try
+│ again. For most commands, you can disable locking with the "-lock=false"
+│ flag, but this is not recommended.
+
+- proves state lock is working as intended. 
+
+
+
+
+

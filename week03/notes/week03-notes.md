@@ -417,7 +417,7 @@ outputs → results after deployment
 
 ### W3D3 -- Remote State and State Locking — Production Terraform
 
-* Creating a stroage account for Terraform state, the Premise being there's one state file which is held and maintained rempotely and has a lock on it so only one person working on it at any given time. This will avoid multiple people running Terraform apply and creating duplicates or causing terraform apply to crash. 
+* Creating a storage account for Terraform state, the Premise being there's one state file which is held and maintained rempotely and has a lock on it so only one person working on it at any given time. This will avoid multiple people running Terraform apply and creating duplicates or causing terraform apply to crash. 
 
 -  Storage account itself is blob storage in this case. It needs versioning enabled so each terraform apply is run it creates a new state file with a version instead of overwriting it. This allows rolling back to previous versions easy if something goes wrong. 
 
@@ -433,4 +433,11 @@ Storage Account: tfstateXXXXX
     └── act1/terraform.tfstate
 
 
+* Creating Terraform remote backend -- this what turns terraform state from a local file to a remote, shared and safe infrastructure file. 
 
+
+* Running Terraform apply 3 times didn;t create 3 different state files in blob storage with version numbers as I expected. Apparently the versioning is done in secret behind the scenes by Azure and is not visible by default. so what you get is a rollback capability but not file duplication with each terraform apply: 
+
+* Ran Terraform destroy and deleted storage account mid run, this causes terraform to crash as it couldn't find the state file: 
+  - do not destroy storage account manually where state file is kept while terraform is perfoming actions: 
+  
