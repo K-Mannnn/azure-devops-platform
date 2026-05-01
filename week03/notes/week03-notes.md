@@ -441,3 +441,139 @@ Storage Account: tfstateXXXXX
 * Ran Terraform destroy and deleted storage account mid run, this causes terraform to crash as it couldn't find the state file: 
   - do not destroy storage account manually where state file is kept while terraform is perfoming actions: 
   
+
+### W3D4 -- Terraform Modules — Reusable Infrastructure
+
+# 📘 Terraform Modules & Environments — Notes (Compact)
+
+## 🧠 Core Idea
+
+* **Modules** = reusable infrastructure (like functions)
+* **Environments** = configurations (dev, prod, etc.)
+* Terraform always runs from a **root module**
+
+---
+
+## 🗂️ Repo Structure
+
+```
+/terraform-infra
+├── /modules
+│   ├── /network
+│   ├── /compute
+│   └── /database
+│
+├── /environments
+│   ├── /dev
+│   ├── /staging
+│   └── /prod
+```
+
+---
+
+## 🧩 Modules vs Environments
+
+### Modules
+
+* Define **how to build infra**
+* Reusable, no hardcoding
+* Files:
+
+  * `main.tf`
+  * `backend.tf`
+  * `outputs.tf`
+
+---
+
+### Environments
+
+* Define **what + config**
+* Each = separate **root module + state**
+* Call modules with different inputs
+
+---
+
+## 📦 Environment Example (`/dev`)
+
+### `main.tf`
+
+```hcl
+module "network" {
+  source = "../../modules/network"
+  env    = "dev"
+}
+
+module "compute" {
+  source         = "../../modules/compute"
+  env            = "dev"
+  instance_type  = var.instance_type
+  subnet_id      = module.network.subnet_id
+}
+```
+
+
+👉 Each environment uses a **different key** (e.g. `prod.terraform.tfstate`)
+
+---
+
+## 🔁 Key Pattern
+
+✅ Same modules
+✅ Different inputs
+❌ No copying full configs
+
+---
+
+## 🔐 State
+
+* Each environment has **isolated state**
+* Prevents cross-environment conflicts
+* Azure backend uses:
+
+  * Storage Account
+  * Blob container
+
+---
+
+## 🧪 `terraform validate`
+
+**Does:**
+
+* Syntax + structure checks
+* Valid variables/modules
+
+**Does NOT:**
+
+* Talk to Azure
+* Verify real resources
+* Catch logic mistakes
+
+---
+
+## 🔄 Workflow
+
+```bash
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
+
+---
+
+## 🧠 Mental Model
+
+* Modules → **blueprints**
+* Environments → **config + state**
+* Root module → **entry point**
+
+---
+
+## 🔑 Takeaways
+
+* Don’t duplicate configs per env
+* Use modules + variables
+* Each env = separate deployment
+* `validate` ≠ real-world check
+
+---

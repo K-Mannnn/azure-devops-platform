@@ -615,5 +615,51 @@ terraform apply
 
 
 
+### W3D4 -- Terraform Modules — Reusable Infrastructure
 
+Archive the existing flat terraform structure, add the following to existing main.tf at top as comment. 
+
+- Week 3 Day 1-3 — flat Terraform, pre-module refactor
+- Superseded by terraform/environments/dev in W3D4
+- Kept for reference — shows evolution from flat to modular structure
+
+# Create new terrafrom folder structure: 
+
+terraform/
+  modules/
+    networking/
+      main.tf        ← all networking resources
+      variables.tf   ← typed inputs
+      outputs.tf     ← exposed values
+      README.md      ← required
+  environments/
+    dev/
+      main.tf        ← calls networking module with dev values
+      outputs.tf
+      backend.tf     ← dev state key
+    staging/
+      main.tf        ← same module, different values
+      outputs.tf
+      backend.tf     ← staging state key
+
+
+* create each file using infrastructure layout from previous week: 
+
+# Dev
+cd terraform/environments/dev
+terraform init
+terraform plan
+terraform apply
+
+# Staging
+cd ../staging
+terraform init
+terraform plan
+terraform apply
+
+# Verify in Portal — you should see:
+
+- rg-networking-dev with dev resources
+- rg-networking-staging with staging resources
+- Two separate state files in the tfstate container: dev/networking.tfstate and staging/networking.tfstate
 
