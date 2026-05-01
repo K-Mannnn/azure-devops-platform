@@ -1,3 +1,9 @@
+
+# Week 3 Day 1-3 — flat Terraform, pre-module refactor
+# Superseded by terraform/environments/dev in W3D4
+# Kept for reference — shows evolution from flat to modular structure
+
+
 terraform {
   required_providers {
     azurerm = {
