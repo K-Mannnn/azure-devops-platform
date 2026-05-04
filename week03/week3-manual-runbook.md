@@ -663,3 +663,208 @@ terraform apply
 - rg-networking-staging with staging resources
 - Two separate state files in the tfstate container: dev/networking.tfstate and staging/networking.tfstate
 
+
+### W3D5 -- The Destroy-and-Rebuild Test — Proof of Reproducibility
+
+cd week03/scripts
+w3-wed-bootstrap-state.sh
+
+cd terraform/environments/dev
+
+terraform init
+terrafrom plan
+terrafrom apply - auto-aprove 
+
+- Rebuilt the entire Dev environment in 2 minutes 2 seconds. 
+
+# To check everything is build as expected and is in terraform: 
+
+terraform state list
+
+- Output
+
+module.networking.azurerm_network_security_group.app
+module.networking.azurerm_network_security_group.data
+module.networking.azurerm_private_dns_zone.internal
+module.networking.azurerm_private_dns_zone_virtual_network_link.internal
+module.networking.azurerm_resource_group.networking
+module.networking.azurerm_subnet.aks
+module.networking.azurerm_subnet.app
+module.networking.azurerm_subnet.data
+module.networking.azurerm_subnet.mgmt
+module.networking.azurerm_subnet_network_security_group_association.app
+module.networking.azurerm_subnet_network_security_group_association.data
+module.networking.azurerm_virtual_network.devops
+
+# to check that vnet exist with the correct address space
+
+az network vnet show \
+  --name vnet-devops-dev \
+  --resource-group rg-networking-dev \
+  --query "{name:name, addressSpace:addressSpace}" \
+  --output table
+
+- Ouput
+
+Name
+---------------
+vnet-devops-dev
+
+# To check all 4 subnets exist
+
+az network vnet subnet list \
+  --vnet-name vnet-devops-dev \
+  --resource-group rg-networking-dev \
+  --output table
+
+- Output
+
+AddressPrefix    DefaultOutboundAccess    Name       PrivateEndpointNetworkPolicies    PrivateLinkServiceNetworkPolicies    ProvisioningState    ResourceGroup
+---------------  -----------------------  ---------  --------------------------------  -----------------------------------  -------------------  -----------------
+10.0.0.0/27      True                     snet-mgmt  Enabled                           Enabled                              Succeeded            rg-networking-dev
+10.0.4.0/23      True                     snet-aks   Enabled                           Enabled                              Succeeded            rg-networking-dev
+10.0.2.0/24      True                     snet-data  Enabled                           Enabled                              Succeeded            rg-networking-dev
+10.0.1.0/24      True                     snet-app   Enabled                           Enabled                              Succeeded            rg-networking-dev
+
+# NSGs exist
+az network nsg list \
+  --resource-group rg-networking-dev \
+  --output table
+
+- output 
+
+Location    Name               ProvisioningState    ResourceGroup      ResourceGuid
+----------  -----------------  -------------------  -----------------  ------------------------------------
+westus      nsg-snet-app-dev   Succeeded            rg-networking-dev  d3b7723e-c3f2-49b7-b7fc-0484e7f10f2b
+westus      nsg-snet-data-dev  Succeeded            rg-networking-dev  4be4a7df-42e9-4575-a256-24a9c9787e35
+
+# NSG rules are correct on app NSG
+az network nsg rule list \
+  --nsg-name nsg-snet-app-dev \
+  --resource-group rg-networking-dev \
+  --output table
+
+- output
+
+Name        ResourceGroup      Priority    SourcePortRanges    SourceAddressPrefixes    SourceASG    Access    Protocol    Direction    DestinationPortRanges    DestinationAddressPrefixes    DestinationASG
+----------  -----------------  ----------  ------------------  -----------------------  -----------  --------  ----------  -----------  -----------------------  ----------------------------  ----------------
+AllowHTTPS  rg-networking-dev  110         *                   Internet                 None         Allow     Tcp         Inbound      443                      *                             None
+AllowHTTP   rg-networking-dev  100         *                   Internet                 None         Allow     Tcp         Inbound      80                       *                             None
+
+# NSG rules are correct on data NSG
+az network nsg rule list \
+  --nsg-name nsg-snet-data-dev \
+  --resource-group rg-networking-dev \
+  --output table
+
+- output
+
+Name                  ResourceGroup      Priority    SourcePortRanges    SourceAddressPrefixes    SourceASG    Access    Protocol    Direction    DestinationPortRanges    DestinationAddressPrefixes    DestinationASG
+--------------------  -----------------  ----------  ------------------  -----------------------  -----------  --------  ----------  -----------  -----------------------  ----------------------------  ----------------
+AllowPostgresFromApp  rg-networking-dev  100         *                   10.0.1.0/24              None         Allow     Tcp         Inbound      5432                     *                             None
+
+# Associations — subnets linked to correct NSGs
+az network vnet subnet show \
+  --name snet-app \
+  --vnet-name vnet-devops-dev \
+  --resource-group rg-networking-dev \
+  --query "networkSecurityGroup.id" \
+  --output tsv
+
+az network vnet subnet show \
+  --name snet-data \
+  --vnet-name vnet-devops-dev \
+  --resource-group rg-networking-dev \
+  --query "networkSecurityGroup.id" \
+  --output tsv
+
+- output
+
+/subscriptions/SUBSCRIPTION -ID/resourceGroups/rg-networking-dev/providers/Microsoft.Network/networkSecurityGroups/nsg-snet-app-dev
+
+/subscriptions/SUBSCRIPTION-ID/resourceGroups/rg-networking-dev/providers/Microsoft.Network/networkSecurityGroups/nsg-snet-data-dev
+
+# Verify Private DNS
+
+# Zone exists
+az network private-dns zone list \
+  --resource-group rg-networking-dev \
+  --output table
+
+- output
+ZoneName             ResourceGroup      RecordSets    MaxRecordSets    VirtualNetworkLinks    MaxVirtualNetworkLinks    VirtualNetworkLinksWithRegistration    MaxVirtualNetworkLinksWithRegistration    ProvisioningState
+-------------------  -----------------  ------------  ---------------  ---------------------  ------------------------  -------------------------------------  ----------------------------------------  -------------------
+devops-lab.internal  rg-networking-dev  1             25000            1                      1000                      1                                      100                                       Succeeded
+
+# VNet link exists with auto-registration
+az network private-dns link vnet list \
+  --resource-group rg-networking-dev \
+  --zone-name devops-lab.internal \ƒ
+  --output table
+
+- output
+
+LinkName              ResourceGroup      RegistrationEnabled    VirtualNetwork                                                                                                                                    LinkState    ProvisioningState
+--------------------  -----------------  ---------------------  ------------------------------------------------------------------------------------------------------------------------------------------------  -----------  -------------------
+link-vnet-devops-dev  rg-networking-dev  True                   /subscriptions/SUBSCRIPTION-ID/resourceGroups/rg-networking-dev/providers/Microsoft.Network/virtualNetworks/vnet-devops-dev  Completed    Succeeded
+
+# Verify Tags on each resource
+
+# Check all resources have managed-by=terraform tag
+az resource list \
+  --resource-group rg-networking-dev \
+  --query "[].{Name:name, Type:type, ManagedBy:tags.\"managed-by\"}" \
+  --output table
+
+- output
+
+Name                                      Type                                                   ManagedBy
+----------------------------------------  -----------------------------------------------------  -----------
+nsg-snet-app-dev                          Microsoft.Network/networkSecurityGroups                terraform
+devops-lab.internal                       Microsoft.Network/privateDnsZones                      terraform
+nsg-snet-data-dev                         Microsoft.Network/networkSecurityGroups                terraform
+vnet-devops-dev                           Microsoft.Network/virtualNetworks                      terraform
+devops-lab.internal/link-vnet-devops-dev  Microsoft.Network/privateDnsZones/virtualNetworkLinks  terraform
+
+# Functional Test -- Spin up a test VM in snet-app
+
+az vm create \
+  --name vm-rebuild-test \
+  --resource-group rg-networking-dev \
+  --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-arm64:latest \
+  --size Standard_B2pls_v2 \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --vnet-name vnet-devops-dev \
+  --subnet snet-app \
+  --nsg "" \
+  --tags environment=dev managed-by=manual week=3
+
+  # SSH in and verify DNS works
+ssh -i ~/.ssh/id_rsa azureuser@<IP>
+resolvectl status
+dig devops-lab.internal
+
+- Output 
+* DNS resolves, 168.63.129.16 is the resolver, private zone is reachable.
+
+# Clean up test VM
+az vm delete \
+  --resource-group rg-networking-dev \
+  --name vm-rebuild-test \
+  --yes
+
+# Final State Check
+
+# Count resources in state
+terraform state list | wc -l
+
+- output 
+12
+
+# Run plan — should show no changes
+terraform plan
+
+- output
+No changes. Your infrastructure matches the configuration.
+

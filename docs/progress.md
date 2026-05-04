@@ -67,6 +67,8 @@ To work on production grade scenarios, and solve more real life problems as the 
 - Azure CLI commands seem to have some limitations in terms of what information can be extracted. 
 - Seems like I haven't even scratched the surface with Bash Scripting. 
 
+***********************************************************
+***********************************************************
 
 ## Week 2 - ## Week 2 — Azure Networking Done Right
 **Completed:** 14/04/2026
@@ -103,4 +105,29 @@ To work on production grade scenarios, and solve more real life problems as the 
 - Infrastructure is getting bigger and hard to keep a mental note of everything. 
 - The Networking and connected resources layers are becoming complex, again hard to maintain mental map of everything. 
 
+***********************************************************
+***********************************************************
 
+## Week 3 — Infrastructure as Code
+**Completed:** 04/05/2026
+
+### What I built
+- Terraform fundamentals — state model, drift detection, lifecycle
+- Remote state in Azure Blob — versioning, soft delete, locking
+- Full network stack as code — VNet, subnets, NSGs, DNS, storage
+- Terraform modules — networking module, dev and staging environments
+- Destroy-and-rebuild test — 2 minutes 2 secs, clean pass
+
+### What I understand now that I didn't before
+- terraform state and state drift
+- How tiniest details entered manually could through the whole state off e.g. adding NSG rule to allow ssh on port 22. 
+- Importance of destroy and rebuild test
+- why terraform exist - what used to take me good couple of hours in the manual week can now be done in 2 minutes. 
+
+### What still confuses me
+- It seems ok at this level but as the infrastructure grows, it will require more stringent testing
+- Although terrafrom solves a major problem but it seems very error prone and bulky. 
+- Yet to see terraform's limitations at complex levels. 
+
+### Destroy-rebuild baseline
+Week 3: 2 minutes 2 secs from clean state to verified environment

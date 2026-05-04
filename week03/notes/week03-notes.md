@@ -577,3 +577,5 @@ terraform apply
 * `validate` ≠ real-world check
 
 ---
+
+## Week 3 Resource count for Dev environment = 12. 
