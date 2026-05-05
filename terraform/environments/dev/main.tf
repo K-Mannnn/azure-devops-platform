@@ -17,7 +17,7 @@ resource "azurerm_resource_group" "compute" {
   location = "westus"
   tags = {
     environment = "dev"
-    owner       = "yourname"
+    owner       = "Kiran"
     project     = "devops-evolution"
     managed-by  = "terraform"
     week        = "4"
@@ -30,7 +30,7 @@ resource "azurerm_resource_group" "data" {
   location = "westus"
   tags = {
     environment = "dev"
-    owner       = "yourname"
+    owner       = "Kiran"
     project     = "devops-evolution"
     managed-by  = "terraform"
     week        = "4"
@@ -43,7 +43,7 @@ resource "azurerm_resource_group" "acr" {
   location = "westus"
   tags = {
     environment = "dev"
-    owner       = "yourname"
+    owner       = "Kiran"
     project     = "devops-evolution"
     managed-by  = "terraform"
     week        = "4"
@@ -68,7 +68,7 @@ module "networking" {
 
   tags = {
     environment = "dev"
-    owner       = "yourname"
+    owner       = "Kiran"
     project     = "devops-evolution"
     managed-by  = "terraform"
     week        = "4"
@@ -86,7 +86,24 @@ module "acr" {
   project             = "devopsevolution"
   tags = {
     environment = "dev"
-    owner       = "yourname"
+    owner       = "Kiran"
+    project     = "devops-evolution"
+    managed-by  = "terraform"
+    week        = "4"
+  }
+}
+
+# KeyVault module
+
+module "keyvault" {
+  source              = "../../modules/keyvault"
+  resource_group_name = azurerm_resource_group.data.name
+  location            = "westus"
+  environment         = "dev"
+  project             = "devopsevolution"
+  tags = {
+    environment = "dev"
+    owner       = "Kiran"
     project     = "devops-evolution"
     managed-by  = "terraform"
     week        = "4"

@@ -52,8 +52,6 @@ terraform apply
 
 - Apply complete! Resources: 5 added, 6 changed, 0 destroyed.
 
-acr_login_server = "acrdevopsevolutiondev.azurecr.io"
-acr_name = "acrdevopsevolutiondev"
 
 # Get the ACR login server
 
@@ -79,4 +77,70 @@ az acr repository show-tags \
 Result
 --------------
 v0.1.0-63e9150
+
+
+
+### W4D2 - Azure Key Vault — Secrets That Are Actually Secret
+
+# Add KeyVault module to terraform
+
+- New repo structure
+
+terraform/
+  week03
+  modules/
+    networking/     
+    acr/    
+    keyvault /        
+  environments/
+    dev/
+    staging/
+
+# Apply
+
+terraform init
+terraform plan
+terraform apply
+
+- Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+
+# Store your first secret
+
+# Get your user object ID
+USER_ID=$(az ad signed-in-user show --query id --output tsv)
+
+# Get Key Vault resource ID
+KV_ID=$(az keyvault show \
+  --name "$(terraform output -raw keyvault_name)" \
+  --query id \
+  --output tsv)
+
+# Assign Key Vault Secrets Officer role to yourself
+az role assignment create \
+  --role "Key Vault Secrets Officer" \
+  --assignee $USER_ID \
+  --scope $KV_ID
+
+
+# Store your first secret
+
+KV_NAME=$(terraform output -raw keyvault_name)
+
+# Store database password
+az keyvault secret set \
+  --vault-name $KV_NAME \
+  --name "postgres-password" \
+  --value "supersecretpassword123"
+
+# Store Redis password placeholder
+az keyvault secret set \
+  --vault-name $KV_NAME \
+  --name "redis-password" \
+  --value "redispassword123"
+
+# Verify it exist
+
+az keyvault secret list \
+  --vault-name $KV_NAME \
+  --output table
 

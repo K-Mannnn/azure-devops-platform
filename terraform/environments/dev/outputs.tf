@@ -15,3 +15,13 @@ output "acr_name" {
   description = "ACR name"
   value       = module.acr.acr_name
 }
+
+output "keyvault_uri" {
+  description = "Key Vault URI"
+  value       = module.keyvault.keyvault_uri
+}
+
+output "keyvault_name" {
+  description = "Key Vault name"
+  value       = module.keyvault.keyvault_name
+}

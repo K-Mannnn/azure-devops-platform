@@ -54,3 +54,39 @@ Today was infrastructure setup. The real Docker work starts
 Week 5 — writing Dockerfiles, running the full stack with
 Compose, fixing the Redis error that's been there since W1D1.
 ACR is ready to receive images when that happens.
+
+
+
+### W4D2 - Azure Key Vault — Secrets That Are Actually Secret
+
+# Azure Key Vault
+
+- A managed service from Microsoft used to securely store and control access to sensitive data like secrets, keys, and certificates. Instead of hardcoding credentials in apps or configs, you store them in Key Vault and retrieve them at runtime.
+
+# What it stores
+
+* Secrets – passwords, connection strings, API keys
+* Keys – cryptographic keys (used for encryption/signing)
+* Certificates – SSL/TLS certs and private keys
+
+# Why use it
+
+* Centralised, secure storage with access control via Azure IAM
+* Supports automatic key rotation and versioning
+* Auditing and logging built in
+* Reduces risk of secrets leaking in code or repos
+
+# How it’s accessed
+
+* Via Azure CLI (az keyvault ...), SDKs, or REST API
+* Typically authenticated using Managed Identity or service principals
+
+# Typical workflow
+
+* Create Key Vault (e.g. via Terraform)
+* Store secrets/keys
+* Grant app/service access (RBAC or access policies)
+* App fetches secrets at runtime
+
+# Key idea:
+* Treat Key Vault as the “source of truth” for anything sensitive—apps should reference, not contain, secrets.
