@@ -128,6 +128,7 @@ To work on production grade scenarios, and solve more real life problems as the 
 - It seems ok at this level but as the infrastructure grows, it will require more stringent testing
 - Although terrafrom solves a major problem but it seems very error prone and bulky. 
 - Yet to see terraform's limitations at complex levels. 
+- when creating certain resources such as a VM, Azure creates certain thing such as a disk or a NIC needed for the VM, These are not incuded in terraform, so not sure how these would be managed since terraform plan would only have the VM in it and not these support resources the Azure creates. 
 
 ### Destroy-rebuild baseline
 Week 3: 2 minutes 2 secs from clean state to verified environment

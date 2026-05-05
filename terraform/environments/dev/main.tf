@@ -11,6 +11,47 @@ provider "azurerm" {
   features {}
 }
 
+# Compute resource group
+resource "azurerm_resource_group" "compute" {
+  name     = "rg-compute-dev"
+  location = "westus"
+  tags = {
+    environment = "dev"
+    owner       = "yourname"
+    project     = "devops-evolution"
+    managed-by  = "terraform"
+    week        = "4"
+  }
+}
+
+# Data resource group
+resource "azurerm_resource_group" "data" {
+  name     = "rg-data-dev"
+  location = "westus"
+  tags = {
+    environment = "dev"
+    owner       = "yourname"
+    project     = "devops-evolution"
+    managed-by  = "terraform"
+    week        = "4"
+  }
+}
+
+# ACR resource group
+resource "azurerm_resource_group" "acr" {
+  name     = "rg-acr-dev"
+  location = "westus"
+  tags = {
+    environment = "dev"
+    owner       = "yourname"
+    project     = "devops-evolution"
+    managed-by  = "terraform"
+    week        = "4"
+  }
+}
+
+
+# Networking module
 module "networking" {
   source = "../../modules/networking"
 
@@ -30,6 +71,24 @@ module "networking" {
     owner       = "yourname"
     project     = "devops-evolution"
     managed-by  = "terraform"
-    week        = "3"
+    week        = "4"
+  }
+}
+
+
+
+# ACR module
+module "acr" {
+  source              = "../../modules/acr"
+  resource_group_name = azurerm_resource_group.acr.name
+  location            = "westus"
+  environment         = "dev"
+  project             = "devopsevolution"
+  tags = {
+    environment = "dev"
+    owner       = "yourname"
+    project     = "devops-evolution"
+    managed-by  = "terraform"
+    week        = "4"
   }
 }
