@@ -35,3 +35,8 @@ variable "soft_delete_retention_days" {
     error_message = "Soft delete retention must be between 7 and 90 days."
   }
 }
+
+variable "log_analytics_workspace_id" {
+  description = "Log Analytics Workspace ID for diagnostic settings"
+  type        = string
+}

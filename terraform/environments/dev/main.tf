@@ -50,6 +50,18 @@ resource "azurerm_resource_group" "acr" {
   }
 }
 
+# Monitoring resource group
+resource "azurerm_resource_group" "monitoring" {
+  name     = "rg-monitoring-dev"
+  location = "westus"
+  tags = {
+    environment = "dev"
+    owner       = "yourname"
+    project     = "devops-evolution"
+    managed-by  = "terraform"
+    week        = "4"
+  }
+}
 
 # Networking module
 module "networking" {
@@ -75,8 +87,6 @@ module "networking" {
   }
 }
 
-
-
 # ACR module
 module "acr" {
   source              = "../../modules/acr"
@@ -84,6 +94,7 @@ module "acr" {
   location            = "westus"
   environment         = "dev"
   project             = "devopsevolution"
+  log_analytics_workspace_id = module.monitoring.workspace_id
   tags = {
     environment = "dev"
     owner       = "Kiran"
@@ -101,6 +112,22 @@ module "keyvault" {
   location            = "westus"
   environment         = "dev"
   project             = "devopsevolution"
+  log_analytics_workspace_id = module.monitoring.workspace_id
+  tags = {
+    environment = "dev"
+    owner       = "Kiran"
+    project     = "devops-evolution"
+    managed-by  = "terraform"
+    week        = "4"
+  }
+}
+
+# Monitoring module
+module "monitoring" {
+  source              = "../../modules/monitoring"
+  resource_group_name = azurerm_resource_group.monitoring.name
+  location            = "westus"
+  environment         = "dev"
   tags = {
     environment = "dev"
     owner       = "Kiran"

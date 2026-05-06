@@ -1,5 +1,5 @@
 variable "resource_group_name" {
-  description = "Resource group to deploy ACR into"
+  description = "Resource group for monitoring resources"
   type        = string
 }
 
@@ -13,19 +13,19 @@ variable "environment" {
   type        = string
 }
 
-variable "project" {
-  description = "Project name"
-  type        = string
-  default     = "devops-evolution"
-}
-
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default     = {}
 }
 
-variable "log_analytics_workspace_id" {
-  description = "Log Analytics Workspace ID for diagnostic settings"
-  type        = string
+variable "retention_in_days" {
+  description = "Log retention in days"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.retention_in_days >= 30 && var.retention_in_days <= 730
+    error_message = "Retention must be between 30 and 730 days."
+  }
 }

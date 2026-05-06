@@ -144,3 +144,139 @@ az keyvault secret list \
   --vault-name $KV_NAME \
   --output table
 
+
+### W4D3 -- Azure Monitor and KQL
+
+# Add Monitoring module to terraform
+
+- This was added manually in week 2, now adding it to terraform. 
+
+- New repo structure
+
+terraform/
+  week03
+  modules/
+    networking/     
+    acr/    
+    keyvault / 
+    monitoring /      
+  environments/
+    dev/
+    staging/
+
+
+# Added Diagnostics settings to both ACR and KeyVault modules
+
+monitoring module creates workspace → outputs workspace_id
+       ↓
+dev/main.tf passes workspace_id into acr module
+dev/main.tf passes workspace_id into keyvault module
+       ↓
+acr module creates diagnostic setting pointing at workspace
+keyvault module creates diagnostic setting pointing at workspace
+
+# Apply to Azure
+
+terraform init
+
+terraform plan
+
+terraform apply
+
+- Apply complete! Resources: 22 added, 0 changed, 0 destroyed.
+
+# Add some data to the workspace
+
+- create some ACR and Keyvault activity to send some logs to monitorint workspace. 
+
+KV_NAME=$(terraform output -raw keyvault_name)
+ACR_NAME=$(terraform output -raw acr_name)
+
+# Generate Key Vault activity — list and show secrets
+az keyvault secret list --vault-name $KV_NAME
+az keyvault secret show --vault-name $KV_NAME --name postgres-password
+
+# Generate ACR activity — login and list
+az acr login --name $ACR_NAME
+az acr repository list --name $ACR_NAME
+
+# Wait 5-10 minutes for logs to flow to workspace
+echo "Waiting for logs to flow..."
+sleep 300
+echo "Done — check the workspace"
+
+
+
+*** Failed with ForbiddenByRBAC error ***
+
+- The secrets and RBAC created in last session (W4D2) were destroyed as part of terraform destroy
+- Recreate the RBAC assignment and secrets to store in Keyvault
+
+# second attempt
+
+KV_NAME=$(terraform output -raw keyvault_name)
+ACR_NAME=$(terraform output -raw acr_name)
+
+# Generate Key Vault activity — list and show secrets
+az keyvault secret list --vault-name $KV_NAME
+az keyvault secret show --vault-name $KV_NAME --name postgres-password
+
+# Generate ACR activity — login and list
+az acr login --name $ACR_NAME
+az acr repository list --name $ACR_NAME
+
+# Wait 5-10 minutes for logs to flow to workspace
+echo "Waiting for logs to flow..."
+sleep 300
+echo "Done — check the workspace"
+
+***. Failed with docker engine not running error ***
+
+- Restart Docker locally
+
+# Attempt 3
+
+KV_NAME=$(terraform output -raw keyvault_name)
+ACR_NAME=$(terraform output -raw acr_name)
+
+# Generate Key Vault activity — list and show secrets
+az keyvault secret list --vault-name $KV_NAME
+az keyvault secret show --vault-name $KV_NAME --name postgres-password
+
+# Generate ACR activity — login and list
+az acr login --name $ACR_NAME
+az acr repository list --name $ACR_NAME
+
+# Wait 5-10 minutes for logs to flow to workspace
+echo "Waiting for logs to flow..."
+sleep 300
+echo "Done — check the workspace"
+
+*** Success ***
+
+# Check the logs in workspace
+
+- Azure portal >> WorkspaceNAME >> logs >> KQL mode
+
+// Query 1 — Key Vault security audit
+// When to use: daily security review, incident investigation
+AzureDiagnostics
+| where TimeGenerated > ago(48h)
+| where ResourceType == "VAULTS"
+| project TimeGenerated, OperationName, CallerIPAddress, ResultType
+| order by TimeGenerated desc
+
+// Query 2 — ACR login audit
+// When to use: who logged into the registry and when
+ContainerRegistryLoginEvents
+| where TimeGenerated > ago(7d)
+| project TimeGenerated, OperationName, CallerIpAddress, Identity
+| order by TimeGenerated desc
+
+
+// Query 3 — Azure resource metrics
+// When to use: performance baseline across all resources
+AzureMetrics
+| where TimeGenerated > ago(24h)
+| summarize AvgValue = avg(Average) by ResourceProvider, MetricName
+| order by AvgValue desc
