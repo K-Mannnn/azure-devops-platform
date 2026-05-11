@@ -280,3 +280,34 @@ AzureMetrics
 | where TimeGenerated > ago(24h)
 | summarize AvgValue = avg(Average) by ResourceProvider, MetricName
 | order by AvgValue desc
+
+- review the result of each query above
+
+terraform destroy
+
+### W4D4 - Complete the Terraform Picture — All Services as Code
+
+- Every single service has now been added as terraform code.
+
+- output.tf 
+
+# environments/dev/outputs.tf have all of these
+output "acr_login_server"           # ✅ added D1
+output "acr_name"                   # ✅ added D1
+output "keyvault_uri"               # ✅ added D2
+output "keyvault_name"              # ✅ added D2
+output "log_analytics_workspace_id" # ✅ added D3
+output "log_analytics_workspace_name" # ✅ added D3
+output "subnet_ids"                 # ← check this exists
+output "vnet_id"                    # ← check this exists
+
+# Week 4 Rebuild test
+
+terraform init
+
+terraform plan
+
+terraform apply
+
+- All completed in 4 minutes
+

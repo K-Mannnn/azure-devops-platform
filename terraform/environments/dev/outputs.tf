@@ -25,3 +25,13 @@ output "keyvault_name" {
   description = "Key Vault name"
   value       = module.keyvault.keyvault_name
 }
+
+output "log_analytics_workspace_id" {
+  description = "Log Analytics Workspace ID"
+  value       = module.monitoring.workspace_id
+}
+
+output "log_analytics_workspace_name" {
+  description = "Log Analytics Workspace name"
+  value       = module.monitoring.workspace_name
+}
