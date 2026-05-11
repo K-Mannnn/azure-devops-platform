@@ -58,4 +58,4 @@ Run the full stack with Docker Compose. Push images to ACR with
 immutable tags. The manual pain of Week 1 finally automated away.
 
 
-![W1-W4-Architecture-Evolution](../architecture_evolution_w1_w4.svg)
+![W1-W4-Architecture-Evolution](./architecture_evolution_w1_w4.svg)
