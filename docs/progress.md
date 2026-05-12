@@ -132,3 +132,30 @@ To work on production grade scenarios, and solve more real life problems as the 
 
 ### Destroy-rebuild baseline
 Week 3: 2 minutes 2 secs from clean state to verified environment
+
+***********************************************************
+***********************************************************
+
+## Week 4 — ACR, Key Vault, and Monitoring
+**Completed:** May 2026
+
+### What I built
+- ACR module — private image registry, admin disabled, immutable tags
+- Key Vault module — secrets store, RBAC auth, purge protection disabled for programme convenience
+- Monitoring module — Log Analytics Workspace, diagnostic settings on ACR and Key Vault
+- All three wired into dev environment via Terraform
+- KQL query library — security audit, deployment audit, NSG deny summary
+- Destroy-rebuild test run on complete stack
+
+### What I understand now that I didn't before
+- Terraform module wiring — monitoring outputs workspace_id, consumed by ACR and Key Vault modules for diagnostic settings. Modules don't talk to each other directly — everything flows through environments/dev/main.tf
+- Why latest is banned — overwritten on every push, no rollback capability. Immutable tags with git SHAs mean every version is permanently addressable
+- Key Vault soft delete gotcha — deleted vaults can't be recreated with the same name during retention period. Purge protection disabled for the programme to allow clean destroy-rebuild
+- inject-secrets.sh must be sourced not executed — exports only persist in the calling shell if sourced
+
+### What still confuses me
+- KQL query schema varies by workspace — queries from documentation don't always work against real data. Need more data flowing before queries become meaningful
+- variables.tf in environments — currently hardcoding values in main.tf, plan to refactor as an exercise
+
+### Destroy-rebuild baseline
+Week 4: 4 minutes from clean state to verified environment
